@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/auth.routes");
+const parcelRoutes = require("./routes/parcel.routes");
 const cors = require("cors");
 
 dotenv.config();
@@ -13,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/parcels", parcelRoutes);
 
 app.get("/", (req, res) => {
   res.send("Courier API running");
