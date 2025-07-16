@@ -1,5 +1,7 @@
 const Parcel = require("../models/parcel.model");
-const User = require("../models/user.model")
+const User = require("../models/user.model");
+const {Parser} = require("json2csv");
+const PDFDocument = require("pdfkit");
 
 
 
@@ -98,4 +100,115 @@ const updateParcelStatus = async (req, res)=>{
     }
 }
 
-module.exports = { bookParcel, getMyParcels, getAllParcels, assignAgent, getAssignedParcels, updateParcelStatus };
+const updatedParcelLocation = async(req,res)=>{
+  try{
+    const {parcelId, lat, lng} = req.body;
+
+    const parcel = await Parcel.findById(parcelId);
+    if(!parcel) return res.status(404).json({message:"Parcel not found"});
+
+    if(!parcel.assignedAgent || parcel.assignedAgent.toString() !== req.user.id){
+      return res.status(403).json({message: "You are not assigned to this parcel"});
+    }
+
+    parcel.currentLocation = {lat,lng};
+    await parcel.save();
+
+    //emit real-time update
+    req.io.emit("location_update",{
+      parcelId,
+      lat,
+      lng,
+    });
+
+    res.status(200).json({message:"Location updated", parcel})
+  } catch(error){
+     res.status(500).json({ message: "Failed to update location", error: error.message });
+  }
+}
+
+const getDashboardMetrics = async(req, res)=>{
+  try{
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0,0,0,0));
+    const endOfDay = new Date(today.setHours(23,59,59,999));
+    
+   const totalBookingsToday = await Parcel.countDocuments({
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+     const failedDeliveries = await Parcel.countDocuments({ status: "Failed" });
+
+      const codTotal = await Parcel.aggregate([
+      { $match: { isPrepaid: false } },
+      { $group: { _id: null, total: { $sum: "$codAmount" } } }
+    ]);
+
+     res.json({
+      totalBookingsToday,
+      failedDeliveries,
+      codAmount: codTotal[0]?.total || 0
+    });
+  } catch(error){
+     res.status(500).json({ message: "Failed to fetch dashboard metrics", error: error.message });
+  }
+}
+
+
+const exportCSV =  async(req, res)=>{
+  try{
+     const parcels = await Parcel.find().populate("customer assignedAgent", "name email");
+
+     const parser = new Parser();
+     const csv = parser.parse(parcels.map(p => ({
+      id:p._id,
+      customer: p.customer?.name,
+      pickup: p.pickupAddress,
+      delivery: p.deliveryAddress,
+      type: p.parcelType,
+      size: p.parcelSize,
+      status:p.status,
+      isPrepaid: p.isPrepaid,
+      codAmount : p.codAmount,
+      assignedAgent : p.assignedAgent?.name
+     })));
+
+     res.header("Content-Type", "text/csv");
+    res.attachment("parcels.csv");
+    res.send(csv);
+  } catch(error){
+     res.status(500).json({ message: "CSV export failed", error: error.message });
+  }
+}
+
+
+const exportPDF = async (req, res) =>{
+  try{
+    const parcels = await Parcel.find().populate("customer assignedAgent", "name email");
+
+  const doc = new PDFDocument();
+   res.setHeader("Content-Type", "application/pdf");
+   res.setHeader("Content-Disposition", "attachment; filename=parcels.pdf");
+   doc.pipe(res);
+
+   doc.fontSize(18).text("Parcel Report", {align:"center"});
+   doc.moveDown();
+
+   parcels.forEach(p =>{
+     doc.fontSize(12).text(`ID: ${p._id}`);
+      doc.text(`Customer: ${p.customer?.name}`);
+      doc.text(`Pickup: ${p.pickupAddress}`);
+      doc.text(`Delivery: ${p.deliveryAddress}`);
+      doc.text(`Type: ${p.parcelType} | Size: ${p.parcelSize}`);
+      doc.text(`Status: ${p.status} | COD: ${p.codAmount} (${p.isPrepaid ? "Prepaid" : "COD"})`);
+      doc.text(`Agent: ${p.assignedAgent?.name || "Not assigned"}`);
+      doc.moveDown();
+   });
+
+   doc.end();
+  } catch(error){
+     res.status(500).json({ message: "PDF export failed", error: error.message });
+  }
+
+}
+
+module.exports = { bookParcel, getMyParcels, getAllParcels, assignAgent, getAssignedParcels, updateParcelStatus, updatedParcelLocation,getDashboardMetrics, exportPDF,exportCSV };
