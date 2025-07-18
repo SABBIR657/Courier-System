@@ -211,4 +211,13 @@ const exportPDF = async (req, res) =>{
 
 }
 
-module.exports = { bookParcel, getMyParcels, getAllParcels, assignAgent, getAssignedParcels, updateParcelStatus, updatedParcelLocation,getDashboardMetrics, exportPDF,exportCSV };
+const getAllAgents = async (req, res) => {
+  try {
+    const agents = await User.find({ role: "agent" }).select("name email phone createdAt");
+    res.status(200).json(agents);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch agents", error: error.message });
+  }
+};
+
+module.exports = { bookParcel, getMyParcels, getAllParcels, assignAgent, getAssignedParcels, updateParcelStatus, updatedParcelLocation,getDashboardMetrics, exportPDF,exportCSV,getAllAgents };

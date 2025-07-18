@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { verifyToken, checkRole } = require("../middleware/auth.middleware");
-const { bookParcel, getMyParcels, getAllParcels, assignAgent, getAssignedParcels,updateParcelStatus,updatedParcelLocation,getDashboardMetrics,exportPDF,exportCSV
+const { bookParcel, getMyParcels, getAllParcels, assignAgent, getAssignedParcels,updateParcelStatus,updatedParcelLocation,getDashboardMetrics,exportPDF,exportCSV, getAllAgents
  } = require("../controllers/parcel.controller");
 
 // Customer: book a parcel
@@ -33,6 +33,9 @@ router.get("/export/csv", verifyToken, checkRole("admin"), exportCSV);
 
 //admin: export pdf
 router.get("/export/pdf", verifyToken, checkRole("admin"), exportPDF)
+
+// Admin: view all delivery agents
+router.get("/agents", verifyToken, checkRole("admin"),getAllAgents)
 
 
 
