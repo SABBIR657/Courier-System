@@ -1,86 +1,81 @@
 import React, { useEffect, useState } from "react";
 import axiosInstance from "../utils/axiosInstance";
+import MetricCard from "../components/Admin/MetricCard";
+import MetricCardSkeleton from "../components/Admin/MetricCardSkeleton";
 
 const AdminDashboard = () => {
   const [metrics, setMetrics] = useState({});
   const [parcelId, setParcelId] = useState("");
   const [agentId, setAgentId] = useState("");
   const [assignMessage, setAssignMessage] = useState("");
-  const [assignError, setAssignError] = useState(""); // To display assignment errors
-  const [isLoadingMetrics, setIsLoadingMetrics] = useState(true); // Loading state for metrics
-  const [isAssigning, setIsAssigning] = useState(false); // Loading state for agent assignment
-  const [user, setUser] = useState(null); // User state for authentication check
-  const [isDownloadingCSV, setIsDownloadingCSV] = useState(false); // Loading state for CSV download
-  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false); // Loading state for PDF download
-  // New state for assigned parcel location and agent name
+  const [assignError, setAssignError] = useState(""); 
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(true); 
+  const [isAssigning, setIsAssigning] = useState(false); 
+  const [user, setUser] = useState(null); 
+  const [isDownloadingCSV, setIsDownloadingCSV] = useState(false); 
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false); 
   const [assignedParcelLocation, setAssignedParcelLocation] = useState(null);
   const [assignedAgentName, setAssignedAgentName] = useState("");
 
-  // New states for displaying all parcels and agents
+  
   const [allParcels, setAllParcels] = useState([]);
   const [allAgents, setAllAgents] = useState([]);
   const [isLoadingAllParcels, setIsLoadingAllParcels] = useState(true);
   const [isLoadingAllAgents, setIsLoadingAllAgents] = useState(true);
-  const [lastAssignedParcelId, setLastAssignedParcelId] = useState(null); // To highlight assigned parcel
+  const [lastAssignedParcelId, setLastAssignedParcelId] = useState(null);
 
   useEffect(() => {
-    // Check user role and redirect if not admin
+    
     const userData = JSON.parse(localStorage.getItem("user"));
     if (!userData || userData.role !== "admin") {
-      // Redirect to login or unauthorized page
+      
       window.location.href = "/login";
     } else {
       setUser(userData);
-      fetchMetrics(); // Fetch metrics only if user is an admin
-      fetchAllParcels(); // Fetch all parcels
-      fetchAllAgents(); // Fetch all agents
+      fetchMetrics(); 
+      fetchAllParcels(); 
+      fetchAllAgents(); 
     }
   }, []);
 
-  /**
-   * Fetches dashboard metrics from the API.
-   */
+  
   const fetchMetrics = async () => {
-    setIsLoadingMetrics(true); // Set loading state to true
+    setIsLoadingMetrics(true); 
     try {
       const res = await axiosInstance.get("/parcels/dashboard/metrics");
       setMetrics(res.data);
     } catch (error) {
       console.error("Failed to load metrics:", error);
-      // Optionally, set an error state to display to the user
+     
     } finally {
-      setIsLoadingMetrics(false); // Set loading state to false
+      setIsLoadingMetrics(false); 
     }
   };
 
-  /**
-   * Fetches all parcels from the API.
-   */
+ 
   const fetchAllParcels = async () => {
     setIsLoadingAllParcels(true);
     try {
-      const res = await axiosInstance.get("/parcels"); // Assuming this endpoint returns all parcels
+      const res = await axiosInstance.get("/parcels"); 
       setAllParcels(res.data);
     } catch (error) {
       console.error("Failed to load all parcels:", error);
-      // Handle error for fetching parcels
+      
     } finally {
       setIsLoadingAllParcels(false);
     }
   };
 
-  /**
-   * Fetches all agents from the API.
-   */
+  
   const fetchAllAgents = async () => {
     setIsLoadingAllAgents(true);
     try {
-      // Assuming an endpoint that returns users with role 'agent'
+     
       const res = await axiosInstance.get("/parcels/agents");
       setAllAgents(res.data);
     } catch (error) {
       console.error("Failed to load all agents:", error);
-      // Handle error for fetching agents
+      
     } finally {
       setIsLoadingAllAgents(false);
     }
@@ -108,16 +103,14 @@ const AdminDashboard = () => {
       setParcelId(""); // Clear input fields on success
       setAgentId("");
 
-      // Update state with new parcel location and assigned agent name
+    
       if (res.data.parcel && res.data.parcel.currentLocation) {
         setAssignedParcelLocation(res.data.parcel.currentLocation);
       }
       if (res.data.parcel && res.data.parcel.assignedAgent) {
         setAssignedAgentName(res.data.parcel.assignedAgent.name);
       }
-      setLastAssignedParcelId(res.data.parcel._id); // Set the ID for highlighting
-
-      // Refresh parcel and agent lists to reflect the assignment
+      setLastAssignedParcelId(res.data.parcel._id); 
       fetchAllParcels();
       fetchAllAgents(); // Agents might be updated if their assigned parcels count changes
     } catch (error) {
@@ -127,13 +120,10 @@ const AdminDashboard = () => {
           "Failed to assign agent. Please try again."
       );
     } finally {
-      setIsAssigning(false); // Set assigning state to false
+      setIsAssigning(false); 
     }
   };
 
-  /**
-   * Downloads the CSV report using axios to include authentication headers.
-   */
   const downloadCSV = async () => {
     setIsDownloadingCSV(true);
     try {
@@ -571,28 +561,6 @@ const AdminDashboard = () => {
   );
 };
 
-// Reusable Metric Card Component
-const MetricCard = ({ title, value, unit, bgColor, textColor }) => (
-  <div
-    className={`relative ${bgColor} rounded-xl shadow-md p-6 overflow-hidden transform transition duration-300 hover:scale-105`}
-  >
-    <div
-      className={`absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-10 ${textColor}`}
-    ></div>
-    <h3 className="text-lg font-semibold text-gray-600 mb-2">{title}</h3>
-    <p className={`text-4xl font-bold ${textColor}`}>
-      {value}
-      {unit && <span className="text-2xl font-normal ml-1">{unit}</span>}
-    </p>
-  </div>
-);
-
-// Skeleton Loader for Metric Cards
-const MetricCardSkeleton = () => (
-  <div className="bg-gray-200 rounded-xl shadow-md p-6 animate-pulse">
-    <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-    <div className="h-8 bg-gray-300 rounded w-1/2"></div>
-  </div>
-);
+<><MetricCard /><MetricCardSkeleton /></>
 
 export default AdminDashboard;

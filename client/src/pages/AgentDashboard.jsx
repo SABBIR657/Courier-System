@@ -1,25 +1,24 @@
 import React, { useEffect, useState } from "react";
 import axiosInstance from "../utils/axiosInstance";
+import ParcelCard from "../components/Agent/ParcelCard";
+import ParcelCardSkeleton from "../components/Agent/ParcelCardSkeleton";
 
 const AgentDashboard = () => {
   const [user, setUser] = useState(null);
   const [assignedParcels, setAssignedParcels] = useState([]);
   const [isLoadingParcels, setIsLoadingParcels] = useState(true);
   const [parcelFetchError, setParcelFetchError] = useState("");
-
-  // State for updating parcel status
   const [updateStatusParcelId, setUpdateStatusParcelId] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("Picked Up");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusError, setStatusError] = useState("");
 
-  // State for updating parcel location
   const [updateLocationParcelId, setUpdateLocationParcelId] = useState("");
   const [newLat, setNewLat] = useState("");
   const [newLng, setNewLng] = useState("");
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
-  const [isGettingLocation, setIsGettingLocation] = useState(false); // New state for geolocation loading
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
   const [locationError, setLocationError] = useState("");
 
@@ -36,9 +35,6 @@ const AgentDashboard = () => {
     }
   }, []);
 
-  /**
-   * Fetches parcels assigned to the current agent.
-   */
   const fetchAssignedParcels = async () => {
     setIsLoadingParcels(true);
     setParcelFetchError("");
@@ -74,9 +70,9 @@ const AgentDashboard = () => {
       setStatusMessage(
         res.data.message || "Parcel status updated successfully!"
       );
-      // Refresh the list of parcels to reflect the change
+
       fetchAssignedParcels();
-      setUpdateStatusParcelId(""); // Clear input
+      setUpdateStatusParcelId("");
     } catch (error) {
       console.error("Failed to update status:", error);
       setStatusError(
@@ -107,9 +103,9 @@ const AgentDashboard = () => {
       setLocationMessage(
         res.data.message || "Parcel location updated successfully!"
       );
-      // Refresh the list of parcels to reflect the change
+
       fetchAssignedParcels();
-      setUpdateLocationParcelId(""); // Clear inputs
+      setUpdateLocationParcelId("");
       setNewLat("");
       setNewLng("");
     } catch (error) {
@@ -123,9 +119,6 @@ const AgentDashboard = () => {
     }
   };
 
-  /**
-   * Gets the current geolocation and populates the latitude and longitude fields.
-   */
   const handleGetCurrentLocation = () => {
     setIsGettingLocation(true);
     setLocationError(""); // Clear previous errors
@@ -133,7 +126,7 @@ const AgentDashboard = () => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setNewLat(position.coords.latitude.toFixed(6)); // Format to 6 decimal places
-          setNewLng(position.coords.longitude.toFixed(6)); // Format to 6 decimal places
+          setNewLng(position.coords.longitude.toFixed(6));
           setIsGettingLocation(false);
         },
         (error) => {
@@ -174,7 +167,6 @@ const AgentDashboard = () => {
     window.location.href = "/login"; // Redirect to login page
   };
 
-  // Render nothing or a loading spinner if user is not yet determined
   if (!user && localStorage.getItem("user")) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -187,7 +179,6 @@ const AgentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 font-inter">
-      {/* Header with Welcome Message and Logout Button */}
       <header className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold text-gray-800 text-center sm:text-left mb-4 sm:mb-0">
           Agent Dashboard
@@ -208,7 +199,6 @@ const AgentDashboard = () => {
         </div>
       </header>
 
-      {/* Assigned Parcels Section */}
       <section className="mb-10">
         <h2 className="text-2xl font-bold text-gray-700 mb-4">
           Your Assigned Parcels
@@ -244,7 +234,6 @@ const AgentDashboard = () => {
         )}
       </section>
 
-      {/* Update Parcel Status Section */}
       <section className="bg-white shadow-lg rounded-xl p-6 mb-10 border border-gray-200">
         <h2 className="text-2xl font-bold text-gray-700 mb-5">
           Update Parcel Status
@@ -469,91 +458,9 @@ const AgentDashboard = () => {
   );
 };
 
-// Reusable Parcel Card Component
-const ParcelCard = ({ parcel }) => {
-  return (
-    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200 transform transition duration-300 hover:scale-105">
-      <h3 className="text-xl font-bold text-gray-800 mb-3">
-        Parcel ID: {parcel._id}
-      </h3>
-      <div className="space-y-2 text-gray-700">
-        <p>
-          <span className="font-semibold">Customer:</span> {parcel.customer}
-        </p>
-        <p>
-          <span className="font-semibold">Pickup:</span> {parcel.pickupAddress}
-        </p>
-        <p>
-          <span className="font-semibold">Delivery:</span>{" "}
-          {parcel.deliveryAddress}
-        </p>
-        <p>
-          <span className="font-semibold">Type:</span> {parcel.parcelType}
-        </p>
-        <p>
-          <span className="font-semibold">Size:</span> {parcel.parcelSize}
-        </p>
-        <p>
-          <span className="font-semibold">Status:</span>{" "}
-          <span
-            className={`font-bold ${
-              parcel.status === "Delivered"
-                ? "text-green-600"
-                : parcel.status === "Failed"
-                ? "text-red-600"
-                : "text-blue-600"
-            }`}
-          >
-            {parcel.status}
-          </span>
-        </p>
-        <p>
-          <span className="font-semibold">Prepaid:</span>{" "}
-          {parcel.isPrepaid ? "Yes" : "No"}
-        </p>
-        {parcel.codAmount > 0 && (
-          <p>
-            <span className="font-semibold">COD Amount:</span> ৳
-            {parcel.codAmount?.toLocaleString()}
-          </p>
-        )}
-        {parcel.currentLocation && (
-          <div className="mt-4">
-            <p className="font-semibold mb-2">Current Location:</p>
-            <div className="w-full h-48 rounded-md overflow-hidden shadow-md border border-gray-300">
-              <iframe
-                title={`Parcel ${parcel._id} Location`}
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                style={{ border: 0 }}
-                src={`https://maps.google.com/maps?q=${parcel.currentLocation.lat},${parcel.currentLocation.lng}&z=15&output=embed`}
-                allowFullScreen=""
-                aria-hidden="false"
-                tabIndex="0"
-              ></iframe>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Skeleton Loader for Parcel Cards
-const ParcelCardSkeleton = () => (
-  <div className="bg-gray-200 rounded-xl shadow-md p-6 animate-pulse">
-    <div className="h-6 bg-gray-300 rounded w-3/4 mb-4"></div>
-    <div className="space-y-2">
-      <div className="h-4 bg-gray-300 rounded w-full"></div>
-      <div className="h-4 bg-gray-300 rounded w-5/6"></div>
-      <div className="h-4 bg-gray-300 rounded w-full"></div>
-      <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-      <div className="h-4 bg-gray-300 rounded w-2/3"></div>
-      <div className="h-4 bg-gray-300 rounded w-1/3"></div>
-      <div className="h-24 bg-gray-300 rounded w-full mt-4"></div>
-    </div>
-  </div>
-);
+<>
+  <ParcelCard />
+  <ParcelCardSkeleton />
+</>;
 
 export default AgentDashboard;
